@@ -1,0 +1,117 @@
+<link rel="shortcut icon" href="images/icon.png" type="image/x-icon">
+<title>Peer2</title>
+<link rel="stylesheet" href="style/peer2.css">
+<h3 id="conn"></h3>
+<div class="videos-section mb" id="vid_section">
+    <video src="" id="peer2_video" autoplay muted></video>
+</div>
+<pre class="mb" id="data"></pre>
+<textarea class="mb" id="text" placeholder="message..."></textarea>
+<button class="pd" id="reciverBtn">Receive</button>
+<script src="test.js"></script>
+<script src="simplepeer.min.js"></script>
+<script src="/socket.io"></script>
+<script>
+    function reload() {
+        window.location.reload()
+    }
+
+    document.getElementById("reciverBtn").setAttribute("disabled", "true")
+
+    var io = io();
+
+    io.on("connect", async() => {
+        console.log("Socket.io : peer2 is connected")
+        await io.on("conn", (conn) => {
+            document.getElementById("conn").innerText = conn >= 2 ? "Total Connection's : " + conn : "Total Connection : Only Me!";
+        })
+    })
+
+    navigator.mediaDevices.getDisplayMedia({
+        video: true,
+        audio: true
+    }).then((strm) => {
+        var ringAudio = new Audio("audio/ringing.mp3");
+        ringAudio.loop = true;
+        var socket = io;
+
+        var peer2 = new SimplePeer({
+            initiator: false,
+            trickle: false,
+            stream: strm
+        })
+
+        document.getElementById("peer2_video").srcObject = strm;
+
+        peer2.on("error", err => console.log(err))
+
+        var sdpObject;
+
+        socket.on("p1offer", (p1off) => {
+            peer2.signal(p1off)
+            peer2.on("signal", (ans) => {
+                sdpObject = ans
+            })
+            ringing()
+        })
+
+        socket.on("reload", () => {
+            reload()
+        })
+
+        peer2.on("connect", () => {
+            console.log("RTC : peer2 is connected with peer1")
+
+            document.getElementById("text").addEventListener("input", () => {
+                peer2.send(document.getElementById("text").value)
+            })
+        })
+
+        var audio;
+
+        peer2.on("stream", (str) => {
+            audio = document.createElement("video")
+            audio.srcObject = str
+            audio.className = "other-video"
+            audio.controls = false
+            audio.volume = 1
+            audio.id = "other_vid"
+            audio.play()
+        })
+
+        peer2.on("data", data => document.getElementById("data").innerHTML = data)
+
+        var color = ["red", "blue"];
+        var color_index = 0;
+        var ringint
+        var ringtmo
+
+        function ringing() {
+            document.getElementById("reciverBtn").removeAttribute("disabled")
+            ringAudio.play()
+            rignint = setInterval(() => {
+                color_index >= 2 ? color_index = 0 : "";
+                document.getElementById("reciverBtn").style.background = color[color_index];
+                color_index++;
+            }, 100)
+            ringtmo = setTimeout(() => {
+                ringAudio.pause()
+                ringAudio.currentTime = 0
+                clearInterval(rignint)
+                document.getElementById("reciverBtn").style.background = "";
+                clearTimeout(ringtmo)
+                document.getElementById("reciverBtn").setAttribute("disabled", "true")
+            }, 15000)
+            document.getElementById("reciverBtn").addEventListener("click", () => {
+                socket.emit("p2ans", sdpObject)
+                ringAudio.pause()
+                ringAudio.currentTime = 0
+                clearInterval(rignint)
+                document.getElementById("reciverBtn").style.background = "";
+                clearTimeout(ringtmo)
+                document.getElementById("reciverBtn").setAttribute("disabled", "true")
+                document.getElementById("vid_section").appendChild(audio)
+            });
+        }
+    }).catch(error => console.log(error))
+</script>

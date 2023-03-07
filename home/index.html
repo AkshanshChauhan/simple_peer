@@ -1,0 +1,108 @@
+<link rel="shortcut icon" href="images/icon.png" type="image/x-icon">
+<meta name="description" content="WebRTC : do Video calling With WebRTC peer to peer connection, join now.">
+<meta name=”robots” content="index, follow">
+<meta name=”robots” content="noindex, nofollow">
+<meta name=”robots” content="noindex, follow">
+<meta name=”robots” content="index, nofollow">
+<meta http-equiv="Content-Type" content="text/html;charset=UTF-8">
+
+<title>WebRTC : Peer To Peer Connection</title>
+<link rel="stylesheet" href="style/home.css">
+<h1>Welcome to this WebRTC Chatting Web Application</h1>
+<div class="links">
+    <h3>Start from here, become a Peer1 and become a Peer2</h3>
+    <div class="links_li">
+        <a href='/peer1' target='/peer1'><button class="p1">PEER1</button></a>
+        <a href='/peer2' target='/peer2'><button class="p2">PEER2</button></a>
+        <a href='/peer2-display' target='/peer2-display'><button class="p3">PEER3</button></a>
+    </div>
+</div>
+<h3 onclick="howto(this)" class="hv" style="cursor: pointer;">How to Start?</h3>
+<div id="howto">
+    <li>Give the Permission's of <b>Camera</b> and <b>Mic</b></li>
+    <li>Peer1 call Peer2 on clicking <b>[call button]</b></li>
+    <li>Peer2 receive a call of Peer1 by clicking on <b>[receive button]</b></li><br>
+    <li>Peer3 is for sharing Display Media like screen sharing : mainly work's on Desktop or Leptop's</li>
+    <ol>WebRTC Started</ol>
+</div>
+<center>
+    <summery style='display: flex; align-items: center; justify-content: center; gap: 10px'>About :
+        <a href='https://www.linkedin.com/in/akshansh-chauhan-5430281b2/'><img src='images/linkedin.png' width='20px'></a>
+        <a href='https://github.com/AkshanshChauhan'><img src='https://avatars.githubusercontent.com/u/92544823?v=4' width='20px'></a>
+    </summery>
+</center>
+<div class="chatbot-btn">HELP</div>
+<div class="chatbot">
+    <div class="window">
+    </div>
+    <input type="text" class="input" list="suggestionlist" placeholder="faq? ex : hello">
+    <datalist id="suggestionlist">
+        <option value="develop">Developer</option>
+        <option value="location">Location</option>
+        <option value="webrtc">WebRTC</option>
+    </datalist>
+</div>
+<script src="/jquery"></script>
+
+<script>
+    var notif_audio = new Audio("audio/notif.wav");
+    var notif_audio_err = new Audio("audio/error.mp3");
+    notif_audio_err.volume = 1
+    notif_audio.volume = 1
+    $(".chatbot").hide()
+    $(".chatbot").dblclick(() => {
+        $(".chatbot").hide()
+    })
+
+    function appinwin(ele, flag) {
+        var p = document.createElement("p");
+        p.innerHTML = ele;
+        flag == 1 ? p.className = "chat-bot" : p.className = "chat";
+        document.querySelector(".window").appendChild(p);
+    }
+
+    $(".input").on("change", () => {
+        sendQuestion($(".input").val())
+        $(".input").val("")
+    })
+
+    $(".chatbot-btn").on("click", () => {
+        $(".chatbot").show()
+    })
+
+    function sendQuestion(qu) {
+        appinwin(qu, 2)
+        $.ajax({
+            method: "post",
+            url: "/faq",
+            data: {
+                quest: qu
+            },
+            success: (data) => {
+                if (data.status == "ok") {
+                    appinwin(data.message, 1)
+                    notif_audio.currentTime = 0
+                    notif_audio.play()
+                } else {
+                    appinwin(data.message, 1)
+                    notif_audio_err.currentTime = 0
+                    notif_audio_err.play()
+                }
+
+                $(".window").scrollTop(9999999999999999);
+            }
+        })
+    }
+</script>
+<script>
+    document.body.onload = () => {
+        alert('this site is under development');
+    }
+
+    $("#howto").hide();
+
+    function howto(e) {
+        e.style.color = "rgb(150, 255, 150)";
+        $("#howto").show();
+    }
+</script>

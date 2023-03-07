@@ -1,0 +1,119 @@
+<link rel="shortcut icon" href="images/icon.png" type="image/x-icon">
+<title>Peer1</title>
+<link rel="stylesheet" href="style/peer1.css">
+<h3 id="conn"></h3>
+<div class="loading"></div>
+<div class="videos-section mb" id="vid_section">
+    <video src="" id="peer1_video" autoplay muted></video>
+</div>
+<pre id="data" class="mb"></pre>
+<textarea id="text" class="mb" placeholder="message..."></textarea>
+<button class="pd" id="call">Call</button>
+<button class="pd" onclick="reload()">Reload</button>
+<select id="camera" onchange="changeDiv(this.value)"></select>
+<script src="test.js"></script>
+<script src="/socket.io"></script>
+<script src="simplepeer.min.js"></script>
+<script src="/jquery"></script>
+<script>
+    var io = io();
+
+    $('#call').hide()
+    $('.loading').hide()
+
+    io.on("connect", async() => {
+        console.log("Socket.io : peer1 is connected")
+        await io.on("conn", (conn) => {
+            document.getElementById("conn").innerText = conn >= 2 ? "Total Connection's : " + conn : "Total Connection : Only Me!";
+        })
+    })
+
+    function reload() {
+        io.emit("reload", {})
+        window.location.reload()
+    }
+
+    var id = null;
+
+    navigator.mediaDevices.enumerateDevices().then((dev) => {
+        let vid = document.getElementById("camera");
+        dev.forEach(e => {
+            let opt = new Option();
+            opt.value = e.deviceId;
+
+            switch (e.kind) {
+                case "videoinput":
+                    opt.text = e.label || `Camera ${vid.length + 1}`;
+                    vid.appendChild(opt);
+                    break;
+            }
+        })
+    })
+
+    var vidobj = {
+        deviceId: "",
+        frameRate: 30
+    }
+
+    const changeDiv = (cam) => {
+        vidobj.deviceId = cam;
+
+        console.log(vidobj)
+
+        navigator.mediaDevices.getUserMedia({
+            video: vidobj,
+            audio: true
+        }).then((strm) => {
+            var sdpObject;
+            var socket = io;
+            peer1 = new SimplePeer({
+                initiator: true,
+                trickle: false,
+                stream: strm
+            })
+
+            $('.loading').show()
+
+            document.getElementById("peer1_video").srcObject = strm;
+
+            peer1.on("signal", (sdp) => {
+                sdpObject = sdp;
+                document.getElementById("call").addEventListener("click", () => {
+                    socket.emit("p1off", sdpObject)
+                    document.getElementById("call").setAttribute("disabled", "true")
+                })
+                $('.loading').hide()
+                $('#call').show()
+            })
+
+            peer1.on("stream", (str) => {
+                var audio = document.createElement("video")
+                audio.srcObject = str
+                audio.className = "other-video"
+                audio.volume = 1
+                document.getElementById("vid_section").appendChild(audio)
+                audio.play()
+                audio.controls = false
+            })
+
+            peer1.on("error", err => console.log("error", err))
+
+            socket.on("p2answer", (p2ans) => {
+                peer1.signal(p2ans)
+                document.getElementById("call").removeAttribute("disabled")
+            })
+
+            peer1.on("connect", () => {
+                console.log("RTC : peer1 is connected with peer2")
+
+                document.getElementById("text").addEventListener("input", () => {
+                    peer1.send(document.getElementById("text").value)
+                })
+            })
+
+            peer1.on("data", data => document.getElementById("data").innerHTML = data)
+        }).catch((error) => {
+            console.log(error)
+        })
+    }
+</script>
